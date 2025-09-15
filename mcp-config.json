@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "yahoo-finance": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {}
+    }
+  }
+}
