@@ -31,7 +31,8 @@ src/
 ├── cli.ts              # Command-line argument parsing
 ├── config.ts           # Configuration management
 ├── server.ts           # Server instance creation
-├── yahoo-finance-service.ts  # Yahoo Finance API client
+├── client.ts           # External API client (Yahoo Finance)
+├── yahoo-finance-service.ts  # Service layer
 ├── types.ts            # TypeScript type definitions
 ├── tools/
 │   ├── index.ts        # Tool exports

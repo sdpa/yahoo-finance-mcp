@@ -24,6 +24,8 @@ async function testDedalusMCPServer() {
     console.log('🎉 All tests completed successfully!');
     console.log('\n📋 Server Features:');
     console.log('   ✅ Modular architecture following Dedalus Labs guidelines');
+    console.log('   ✅ Dedicated API client class (src/client.ts)');
+    console.log('   ✅ Service layer abstraction');
     console.log('   ✅ Streamable HTTP transport (primary)');
     console.log('   ✅ STDIO transport (development)');
     console.log('   ✅ Session management');
