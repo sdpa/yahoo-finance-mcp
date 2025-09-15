@@ -1,6 +1,6 @@
 # Yahoo Finance MCP Server
 
-A Model Context Protocol (MCP) server that provides real-time stock data, historical prices, news, and comparison features using Yahoo Finance data.
+A Model Context Protocol (MCP) server that provides real-time stock data, historical prices, news, and comparison features using Yahoo Finance data. Built following [Dedalus Labs server guidelines](https://docs.dedaluslabs.ai/server-guidelines) with streamable HTTP transport as the primary method.
 
 ## Features
 
@@ -8,6 +8,39 @@ A Model Context Protocol (MCP) server that provides real-time stock data, histor
 - **Historical Data**: Retrieve OHLCV data for any time range
 - **News**: Fetch latest news headlines for any ticker
 - **Comparison**: Compare multiple stocks side by side
+- **Streamable HTTP Transport**: Modern HTTP transport for production deployment
+- **STDIO Transport**: Development-friendly transport for local testing
+- **Session Management**: Proper session handling for HTTP connections
+- **Health Checks**: Built-in health monitoring endpoints
+
+## Architecture
+
+This server follows the [Dedalus Labs MCP Server Guidelines](https://docs.dedaluslabs.ai/server-guidelines) with:
+
+- **Modular Architecture**: Clear separation of concerns with dedicated modules
+- **Streamable HTTP First**: Modern HTTP transport as the primary interface
+- **Type Safety**: Full TypeScript coverage with proper interfaces
+- **Production Ready**: Built-in error handling, logging, and configuration management
+- **Testable**: Dependency injection and isolated components
+
+### Directory Structure
+
+```
+src/
+├── index.ts            # Main entry point
+├── cli.ts              # Command-line argument parsing
+├── config.ts           # Configuration management
+├── server.ts           # Server instance creation
+├── yahoo-finance-service.ts  # Yahoo Finance API client
+├── types.ts            # TypeScript type definitions
+├── tools/
+│   ├── index.ts        # Tool exports
+│   └── yahoo-finance.ts # Tool definitions and handlers
+└── transport/
+    ├── index.ts        # Transport exports
+    ├── http.ts         # HTTP transport (primary)
+    └── stdio.ts        # STDIO transport (development)
+```
 
 ## MCP Tools
 
@@ -50,34 +83,6 @@ Get historical OHLCV data for a stock.
 - `range` (string, optional): Time range - `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max` (default: `1mo`)
 - `interval` (string, optional): Data interval - `1m`, `2m`, `5m`, `15m`, `30m`, `60m`, `90m`, `1h`, `1d`, `5d`, `1wk`, `1mo`, `3mo` (default: `1d`)
 
-**Example:**
-```json
-{
-  "ticker": "TSLA",
-  "range": "1mo",
-  "interval": "1d"
-}
-```
-
-**Response:**
-```json
-{
-  "ticker": "TSLA",
-  "range": "1mo",
-  "interval": "1d",
-  "data": [
-    {
-      "date": "2024-01-15",
-      "open": 200.00,
-      "high": 205.50,
-      "low": 198.75,
-      "close": 203.25,
-      "volume": 25000000
-    }
-  ]
-}
-```
-
 ### 3. get_news
 Get latest news headlines for a stock.
 
@@ -85,62 +90,11 @@ Get latest news headlines for a stock.
 - `ticker` (string, required): Stock ticker symbol
 - `limit` (number, optional): Number of news items (1-50, default: 5)
 
-**Example:**
-```json
-{
-  "ticker": "MSFT",
-  "limit": 5
-}
-```
-
-**Response:**
-```json
-{
-  "ticker": "MSFT",
-  "news": [
-    {
-      "title": "Microsoft Reports Strong Q4 Earnings",
-      "summary": "Microsoft exceeded expectations with revenue growth...",
-      "url": "https://example.com/news/1",
-      "publishedAt": "2024-01-15T09:00:00.000Z",
-      "source": "Yahoo Finance"
-    }
-  ],
-  "limit": 5
-}
-```
-
 ### 4. compare_stocks
 Compare multiple stocks side by side.
 
 **Parameters:**
 - `tickers` (array, required): Array of stock ticker symbols (2-10 tickers)
-
-**Example:**
-```json
-{
-  "tickers": ["AAPL", "GOOGL", "AMZN"]
-}
-```
-
-**Response:**
-```json
-{
-  "tickers": ["AAPL", "GOOGL", "AMZN"],
-  "data": [
-    {
-      "ticker": "AAPL",
-      "price": 150.25,
-      "change": 2.15,
-      "changePercent": 1.45,
-      "volume": 45000000,
-      "marketCap": 2500000000000,
-      "pe": 25.5
-    }
-  ],
-  "timestamp": "2024-01-15T10:30:00.000Z"
-}
-```
 
 ## Installation
 
@@ -162,87 +116,159 @@ npm run build
 
 ## Usage
 
-### As an MCP Server
+### STDIO Transport (Development)
 
-The server runs as a standard MCP server using stdio transport. It can be integrated with any MCP-compatible client.
+For local development and testing:
 
-#### For Claude Desktop
+```bash
+# List available tools
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' | npm run start:stdio
 
-1. Add the server to your Claude Desktop configuration:
+# Get Apple stock quote
+echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "get_quote", "arguments": {"ticker": "AAPL"}}}' | npm run start:stdio
 
-**On macOS:**
+# Compare multiple stocks
+echo '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "compare_stocks", "arguments": {"tickers": ["AAPL", "GOOGL", "MSFT"]}}}' | npm run start:stdio
+```
+
+### HTTP Transport (Production)
+
+For production deployment with streamable HTTP:
+
+```bash
+# Start HTTP server
+npm start
+
+# Health check
+curl http://localhost:8080/health
+
+# The server supports both:
+# - /mcp endpoint for streamable HTTP transport
+# - /sse endpoint for SSE transport (backward compatibility)
+```
+
+### Command Line Options
+
+```bash
+# Run with custom port
+npm start -- --port 3000
+
+# Force STDIO transport
+npm run start:stdio
+
+# Show help
+npm start -- --help
+```
+
+## Configuration
+
+### Environment Variables
+
+- `PORT`: HTTP server port (default: 8080)
+- `NODE_ENV`: Set to 'production' for production mode
+
+### Client Configuration
+
+For MCP clients, use this configuration:
+
 ```json
 {
   "mcpServers": {
     "yahoo-finance": {
-      "command": "node",
-      "args": ["dist/index.js"],
-      "cwd": "/path/to/your/yahoo-finance-mcp"
+      "url": "http://localhost:8080/mcp"
     }
   }
 }
 ```
 
-2. Restart Claude Desktop
-
-3. The tools will be available in Claude Desktop for financial data queries
-
-#### For Other MCP Clients
-
-The server can be used with any MCP-compatible client by connecting to it via stdio transport.
-
-### Development Mode
-
-```bash
-npm run dev
-```
-
-### Production Mode
-
-```bash
-npm start
-# or
-npm run mcp
-```
-
-## Configuration
-
-The server includes configuration files for easy setup:
-
-- `mcp-config.json`: General MCP server configuration
-- `claude_desktop_config.json`: Claude Desktop specific configuration
-
-## Error Handling
-
-All tools return appropriate error messages in the MCP response format:
+For backward compatibility with SSE:
 
 ```json
 {
-  "content": [
-    {
-      "type": "text",
-      "text": "Error: Failed to fetch quote for INVALID_TICKER: No data found for ticker: INVALID_TICKER"
+  "mcpServers": {
+    "yahoo-finance": {
+      "url": "http://localhost:8080/sse"
     }
-  ],
-  "isError": true
+  }
 }
+```
+
+## Testing
+
+### Run Comprehensive Tests
+
+```bash
+# Test both transports
+node test-dedalus-mcp.js
+
+# Test individual tools
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' | npm run start:stdio
+```
+
+### Health Monitoring
+
+```bash
+# Check server health
+curl http://localhost:8080/health
+
+# Expected response:
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "service": "yahoo-finance-mcp",
+  "version": "0.2.0"
+}
+```
+
+## Development
+
+### Available Scripts
+
+- `npm run build`: Compile TypeScript to JavaScript
+- `npm run watch`: Watch mode for development
+- `npm start`: Start HTTP server
+- `npm run start:stdio`: Start STDIO server
+- `npm run dev`: Build and start HTTP server
+- `npm run dev:stdio`: Build and start STDIO server
+
+### Project Structure
+
+The server follows the Dedalus Labs guidelines with:
+
+- **Modular Design**: Each component has a specific responsibility
+- **Transport Abstraction**: Easy switching between HTTP and STDIO
+- **Configuration Management**: Environment-based configuration
+- **Error Handling**: Comprehensive error handling throughout
+- **Type Safety**: Full TypeScript coverage
+
+## Production Deployment
+
+### Docker Deployment
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist/ ./dist/
+EXPOSE 8080
+CMD ["node", "dist/index.js"]
+```
+
+### Environment Setup
+
+```bash
+# Production environment
+export NODE_ENV=production
+export PORT=8080
+npm start
 ```
 
 ## Dependencies
 
-- **@modelcontextprotocol/sdk**: Official MCP SDK for TypeScript
+- **@modelcontextprotocol/sdk**: Official MCP SDK (v1.17.3+)
 - **yahoo-finance2**: Yahoo Finance API client
-- **typescript**: TypeScript support
-
-## Architecture
-
-The server is built using the official MCP SDK and follows MCP best practices:
-
-- **Tools**: Each financial operation is exposed as an MCP tool
-- **Type Safety**: Full TypeScript support with proper type definitions
-- **Error Handling**: Comprehensive error handling with MCP-compliant responses
-- **Validation**: Input validation for all tool parameters
-- **Documentation**: Self-documenting tools with detailed schemas
+- **dotenv**: Environment variable management
 
 ## License
 
@@ -252,10 +278,16 @@ MIT License
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
+3. Make your changes following the Dedalus Labs guidelines
 4. Add tests if applicable
 5. Submit a pull request
 
 ## Support
 
 For issues and questions, please open an issue on the GitHub repository.
+
+## References
+
+- [Dedalus Labs MCP Server Guidelines](https://docs.dedaluslabs.ai/server-guidelines)
+- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
+- [Yahoo Finance API](https://github.com/gadicc/node-yahoo-finance2)
